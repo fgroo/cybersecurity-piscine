@@ -181,12 +181,15 @@ func	main() {
 	} // return fmt.Errorf("missing required parameter: %s", "user_id")
 	if len(os.Args) == 2 && len(os.Args[1]) <  len("http://x.x") {
 		fmt.Errorf("if you only use one parameter, then that one has to be the URL\n", "URL missing")
+		return
 	} // there might be a way better option to check for valid parameters
 	if len(os.Args) == 3 && len(os.Args[1]) >  len("-rlp") {
 		fmt.Errorf("the first parameters must be the option [-rlp], with the URL as the last parameter\n", "wrong format")
+		return
 	}
 	if len(os.Args) == 3 && os.Args[1] != "-r" && os.Args[1] != "-p" && os.Args[1] != "-rl" && os.Args[1] != "-lr" && os.Args[1] != "-rlp" && os.Args[1] != "-prl" && os.Args[1] != "-rpl" && os.Args[1] != "-lpr" && os.Args[1] != "-pr"  && os.Args[1] != "-rp" {
 		fmt.Errorf("invalid parameter, use [-rlp]\n", "invalid parameter")
+		return
 	}
 	executer(parse_options())
 	// fmt.Println("%s", content)
