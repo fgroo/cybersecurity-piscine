@@ -32,46 +32,51 @@ func	prevent_doubles(seen []string, target string) bool {
 // }
 
 func	parse_img_urls_for_img_src(content string) (path_str string, snipped_content string) {
-	valid_body_seq := []string{"<img", ">", "src=\"", "\""} 
-	valid_image_types := []string{".jpg\"", ".jpeg\"", ".png\"", ".gif\"", ".bmp\""}
+	valid_image_types := []string{".jpg", ".jpeg", ".png", ".gif", ".bmp"}
 
-	start_index := strings.Index(content, valid_body_seq[0])
+	start_index := strings.Index(content, "<img")
 	if start_index == -1 {
 		return "", ""
 	}
-	end_index := strings.Index(content[start_index:], valid_body_seq[1])
+	tag_end := strings.Index(content[start_index:], ">")
+	if tag_end == -1 {
+		return "", ""
+	}
+	tag := content[start_index : start_index + tag_end + 1]
+	snipped_content = content[start_index + tag_end + 1:]
+	
+	src_index := strings.Index(tag, " src=\"")
+	if src_index == -1 {
+		return "", snipped_content
+	}
+	src_start := start_index + src_index + len(" src=\"")
+	end_index := strings.Index(content[src_start:], "\"")
 	if end_index == -1 {
 		return "", ""
 	}
-	start_path := strings.Index(content[start_index:], valid_body_seq[2])
-	if start_path == -1 {
-		return "", ""
+	path_str = content[src_start : src_start+end_index]
+
+	// INFO: a src may carry ?query or #fragment; only the file name decides the type
+	file_name := path_str
+	if cut := strings.IndexAny(file_name, "?#"); cut != -1 {
+		file_name = file_name[:cut]
 	}
-	end_path := strings.Index(content[start_path:], valid_body_seq[3])
-	if end_path == -1 {
-		return "", ""
-	}
-	path_str = content[start_path:end_path]
-	for i, _ := range valid_image_types {
-		if strings.LastIndex(path_str, valid_image_types[i]) == -1 {
-			continue
-		} else if strings.LastIndex(path_str, valid_image_types[i]) < len(path_str) - len(valid_image_types[i]) {
-			fmt.Print("error: occurence is not at the end\n")
-			continue
+	for _, value := range valid_image_types {
+		if strings.HasSuffix(strings.ToLower(file_name), value) {
+			return path_str, content[src_start + end_index + 1:]
 		}
-		return path_str, content[end_path:]
 	}
-	return "", ""
+	return "", snipped_content
 }
 
 // href=" , 
 
 func	find_hrefs_urls(content string, depth int) (seen []string, err error) {
-	
+
 	var find_line int
 
 	for depth > 0 {
-		if find_line := strings.Index(content, "<a") ; find_line == -1 {
+		if find_line = strings.Index(content, "<a") ; find_line == -1 {
 			return seen, fmt.Errorf("<a")
 		}
 		if find_line := strings.Index(content[find_line:], "<\\a>") ; find_line == -1 {
@@ -98,7 +103,7 @@ func	find_hrefs_urls(content string, depth int) (seen []string, err error) {
 func	fetch_url(url string) (content string) {
 	resp, err := http.Get(url) // https://de.wikipedia.org/wiki/6-7
 	if err != nil {
-		fmt.Print("error: %d - not available\n", err) // handle error
+		fmt.Errorf("error: %d - not available\n", err) // handle error
 		return ""
 	}
 	bytes, err := io.ReadAll(resp.Body)
@@ -114,34 +119,47 @@ func	executer(recursive bool, depth int, path string) {
 
 	var	urls vars
 	content := fetch_url(os.Args[len(os.Args)-1])
+	content = string(content)
 
 	if recursive == false || depth == 0 {
 		image := ""
 		for content != "" {
 			image, content = parse_img_urls_for_img_src(content)
+			if image == "" {
+				continue
+			}
 			urls.images = append(urls.images, image)
 		}
-		//download images
-		//put into folder
+
+	} else {
+		if urls.seen, err = find_hrefs_urls(content, depth) ; err != nil {
+			return
+		for i, cont
+		for content != "" {
+			image, content = parse_img_urls_for_img_src(content)
+			if image == "" {
+				continue
+			}
+			urls.images = append(urls.images, image)
+		}
 	}
-	//append(vars.seen, content)
 	err := os.Mkdir(path, 0755)
 	if errors.Is(err, os.ErrExist) {
 		fmt.Println("Folder already exists")
-	} else {
+	} else if err != nil {
 		fmt.Println("Something went wrong:", err)
 	}
-	if urls.seen, err = find_hrefs_urls(content, depth) ; err != nil {
-		return
-	}
-	
-
+	// TODO: download images and put into folder
 }
 
 
 func	parse_options() (recursive bool, depth int, path string) {
 	default_path := "./data/"
 	var	err error
+
+	if len(os.Args) == 2 {
+		return false, 0, default_path
+	}
 
 	if os.Args[1] == "-r" {
 		return true, 0, default_path
@@ -174,7 +192,6 @@ func	parse_options() (recursive bool, depth int, path string) {
 }
 
 func	main() {
-
 	if len(os.Args) == 1 {
 		fmt.Errorf("run the command at least with one parameter, which is the URL\n", "arguments missing")
 		return
