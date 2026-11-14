@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"errors"
 	"net/url"
+	"path"	// FIXED: last path element of a URL -> the file name
+	"path/filepath"	// FIXED: build the local destination path
 	//"encoding/hex"
 )
 
@@ -250,27 +252,65 @@ func	executer(recursive bool, depth int, path string) {
 		// OPEN: return might be better to prevent a loop of failed written images on the disk
 	}
 	// TODO: download images and put into folder
+	// FIXED: strings.Trim(link, "https://") is NOT a prefix trim. The 2nd argument is a SET OF
+	// CHARACTERS: it cuts any of h,t,p,s,: and / off the front AND the back. The scheme happens
+	// to go away, but "https://s.x.com/..." also eats the first host letter, and "?width=800"
+	// stays on. What is left is still a whole path ("dyl347hiwv3ct.cloudfront.net/app/uploads/
+	// 2026/11/PR-Horizontal.jpeg"), so os.Create fails with "no such file or directory" because
+	// those folders do not exist under ./data/. The name I want is the LAST path element:
+	// url.Path drops ?query and #fragment, path.Base cuts everything before the last "/".
+	// OLD (kept for reference):
+	// 	img, err := os.Create(path + strings.Trim(link, "https://"))
+	// 	...
+	// 	defer resp.Body.Close()	// inside the for loop
+	// 	defer img.Close()		// inside the for loop, deferred a second time at the end
 	for _, link := range urls.images {
-		resp, err := http.Get(link)
-		fmt.Println("ttt")
-		if err != nil {
-			fmt.Printf("error: %v - not available\n", err)
+		dest := image_file_name(link)
+		if dest == "" {
+			continue	// no file name in the URL at all, nothing to store
+		}
+		// filepath.Join so it also works when -p was given without a trailing "/"
+		if err := download_image(filepath.Join(path, dest), link) ; err != nil {
+			fmt.Printf("error: %v - %s\n", err, link)
 			continue
 		}
-		defer resp.Body.Close()
-		img, err := os.Create(path + strings.Trim(link, "https://"))
-		if err != nil {
-			fmt.Printf("error: %v - unable to create image file\n", err)
-			continue
-		}
-		defer img.Close()
-		_, err = io.Copy(img, resp.Body)
-		if err != nil {
-			fmt.Printf("error: %v - unable to write image file\n", err)
-			continue
-		}
-		defer img.Close()
 	}
+}
+
+// FIXED: the last path element of a URL, ready to be a file name.
+func	image_file_name(link string) string {
+	u, err := url.Parse(link)
+	if err != nil {
+		return ""
+	}
+	// "path" and not "filepath": URL paths always use "/", filepath would also treat
+	// "\" as a separator on Windows.
+	name := path.Base(u.Path)
+	if name == "" || name == "." || name == ".." || name == "/" {
+		return ""
+	}
+	return name
+}
+
+// FIXED: a function of its own so the two defers run at the END of THIS call, once per image.
+// The old version had "defer resp.Body.Close()" inside the for loop in executer, and defers
+// only run when the ENCLOSING function returns: with 50 images nothing was closed until the
+// whole program ended, and it runs out of file descriptors / connections before that.
+func	download_image(dest string, link string) error {
+	resp, err := http.Get(link)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	file, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer file.Close()	// FIXED: once is enough; the old code deferred img.Close() twice
+
+	_, err = io.Copy(file, resp.Body)
+	return err
 }
 
 
