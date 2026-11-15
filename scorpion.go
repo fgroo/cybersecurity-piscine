@@ -4,18 +4,7 @@ import (
 	"fmt"
 	exif "github.com/dsoprea/go-exif/v3"
 	"os"
-	//"strings"
-	//"io"
-	//"path"
-	//"path/filepath"
 )
-
-func	readexif(files ...string) {
-	//valid_image_types := []string{".jpg", ".jpeg", ".png", ".gif", ".bmp"}
-
-
-
-}
 
 func main() {
 	if len(os.Args) == 1 {
@@ -54,10 +43,8 @@ func main() {
 				}
 			}
 		}
-
 		if creationdate != "" {
 			fmt.Printf("Creation date: %s\n\n", creationdate)
 		}
-
 	}
 }
