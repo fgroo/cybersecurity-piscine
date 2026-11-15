@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"path"	// FIXED: last path element of a URL -> the file name
 	"path/filepath"	// FIXED: build the local destination path
-	//"encoding/hex"
 )
 
 type vars struct {
@@ -229,7 +228,7 @@ func	executer(recursive bool, depth int, path string) {
 			return
 		}
 		urls.seen = filter_links(page, urls.seen)	// FIXED: relative hrefs, bare "#" and off-site links
-		for _, link := range urls.seen {	// FIXED: renamed, "url" would hide the package net/url
+		for _, link := range urls.seen {
 			content = fetch_url(link)
 
 			for content != "" {
@@ -343,7 +342,7 @@ func	parse_options() (recursive bool, depth int, path string) {
 		}
 		return true, depth, os.Args[2]
 	}
-	if os.Args[1] == "-lpr" || os.Args[1] == "-rp" || os.Args[1] == "-pr" {
+	if os.Args[1] == "-lpr" || os.Args[1] == "-rlp" {
 		if depth, err = strconv.Atoi(os.Args[2]) ; err != nil {
 			return true, 5, os.Args[3]
 		}
