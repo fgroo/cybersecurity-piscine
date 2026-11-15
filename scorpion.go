@@ -4,6 +4,7 @@ import (
 	"fmt"
 	exif "github.com/dsoprea/go-exif/v3"
 	"os"
+	//"strings"
 	//"io"
 	//"path"
 	//"path/filepath"
@@ -22,7 +23,6 @@ func main() {
 		return
 	}
 	files := os.Args[1:]
-	//var paths []*os.File
 	var	rawexif []byte
 	var flatexif []exif.ExifTag
 	for i, _ := range files {
@@ -31,8 +31,6 @@ func main() {
 			fmt.Printf("error: %v - %d - %s\n", err, n, files[i])
 			return
 		}
-		//defer n.Close()
-		//fmt.Println(string(string(n)))
 		rawexif, err = exif.SearchAndExtractExif(n)
 		if err != nil {
 			fmt.Printf("error: %v - %d - %s\n", err, n, files[i])
@@ -43,12 +41,23 @@ func main() {
 			fmt.Printf("error: %v - %d - %s\n", err, n, files[i])
 			return
 		}
-		//paths = append(paths, n)
-	}
-	//for _, r 
-	
-	//fmt.Println(paths)
-	for _, tag := range flatexif {
-	fmt.Println(tag.String())
+		var creationdate string
+		fmt.Printf("FILE%d: %s\n", i + 1, files[i])
+		for _, tag := range flatexif {
+			fmt.Println(tag.String())
+			switch tag.TagName {
+			case "DateTimeOriginal":
+				creationdate = tag.Formatted
+			case "DateTime":
+				if creationdate == "" {
+					creationdate = tag.Formatted
+				}
+			}
+		}
+
+		if creationdate != "" {
+			fmt.Printf("Creation date: %s\n\n", creationdate)
+		}
+
 	}
 }
